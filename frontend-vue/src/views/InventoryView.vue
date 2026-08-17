@@ -1,53 +1,123 @@
 <script setup lang="ts">
 /**
- * ============================================
- *  库存查询页 — 候选人需要实现（任务2）
- * ============================================
- *
+ * 库存查询页
  * 需求：
  * 1. 搜索栏：商品名称/SKU 模糊搜索 + 仓库下拉筛选
  * 2. 表格展示：商品名称、SKU、库位编码、仓库名、库存数量、更新时间
  * 3. 库存数量 < 10 的行高亮为红色
- * 4. 支持分页
- *
- * 建议使用 AI 协作完成此页面，参考 ProductsView.vue 的实现风格
+ * 4. 支持分页（后端分页）
  */
-import { ref } from 'vue'
+import { ref, onMounted, watch } from 'vue'
+import { ElMessage } from 'element-plus'
+import {
+  getInventory,
+  getWarehouses,
+  type InventoryItem,
+  type Warehouse,
+} from '@/api'
 
 const keyword = ref('')
-const warehouseId = ref<number | undefined>()
+const warehouseId = ref<number | undefined>(undefined)
 const loading = ref(false)
-const inventoryList = ref<any[]>([])
+const inventoryList = ref<InventoryItem[]>([])
 const total = ref(0)
 const page = ref(1)
 const pageSize = ref(20)
 
-// TODO: 候选人实现 loadInventory 函数
+const warehouses = ref<Warehouse[]>([])
+
 const loadInventory = async () => {
-  // 提示：调用 getInventory({ keyword, warehouseId, page, pageSize })
+  loading.value = true
+  try {
+    const res = await getInventory({
+      keyword: keyword.value || undefined,
+      warehouseId: warehouseId.value,
+      page: page.value,
+      pageSize: pageSize.value,
+    })
+    inventoryList.value = res.data.list
+    total.value = res.data.total
+  } catch (e: any) {
+    ElMessage.error('加载失败: ' + (e.response?.data?.message || e.message))
+  } finally {
+    loading.value = false
+  }
 }
 
-// TODO: 候选人实现表格行样式
-const getRowStyle = (row: any) => {
-  // 提示：当 row.quantity < 10 时返回红色样式
+// 查询按钮 / 清空搜索：回到第一页再加载
+const handleSearch = () => {
+  page.value = 1
+  loadInventory()
+}
+
+// 仓库切换：回到第一页再加载
+const handleWarehouseChange = () => {
+  page.value = 1
+  loadInventory()
+}
+
+// 分页切换
+const handlePageChange = () => {
+  loadInventory()
+}
+
+// 低库存行高亮：数量 < 10 -> 红色
+const getRowStyle = ({ row }: { row: InventoryItem }) => {
+  if (row.quantity < 10) {
+    return { backgroundColor: '#fef0f0', color: '#f56c6c', fontWeight: '600' }
+  }
   return {}
 }
+
+// 防抖：输入停顿 300ms 后自动搜索（回到第一页）
+let debounceTimer: ReturnType<typeof setTimeout> | undefined
+watch(keyword, () => {
+  if (debounceTimer) clearTimeout(debounceTimer)
+  debounceTimer = setTimeout(() => {
+    page.value = 1
+    loadInventory()
+  }, 300)
+})
+
+onMounted(async () => {
+  try {
+    const res = await getWarehouses()
+    warehouses.value = res.data
+  } catch (e: any) {
+    ElMessage.error('加载仓库失败: ' + (e.response?.data?.message || e.message))
+  }
+  await loadInventory()
+})
 </script>
 
 <template>
   <div>
-    <h3> 库存查询</h3>
+    <h3>库存查询</h3>
 
-    <!-- 搜索栏 — 候选人实现 -->
-    <div style="display: flex; gap: 12px; margin-bottom: 16px">
-      <el-input v-model="keyword" placeholder="搜索商品名称/SKU..." style="width: 300px" clearable />
-      <el-select v-model="warehouseId" placeholder="选择仓库" clearable style="width: 200px">
-        <!-- TODO: 加载仓库列表 -->
+    <div style="display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap">
+      <el-input
+        v-model="keyword"
+        placeholder="搜索商品名称/SKU..."
+        style="width: 300px"
+        clearable
+      />
+      <el-select
+        v-model="warehouseId"
+        placeholder="选择仓库"
+        clearable
+        style="width: 200px"
+        @change="handleWarehouseChange"
+      >
+        <el-option
+          v-for="wh in warehouses"
+          :key="wh.id"
+          :label="wh.name"
+          :value="wh.id"
+        />
       </el-select>
-      <el-button type="primary" @click="loadInventory">查询</el-button>
+      <el-button type="primary" @click="handleSearch">查询</el-button>
     </div>
 
-    <!-- 表格 — 候选人实现 -->
     <el-table :data="inventoryList" v-loading="loading" border stripe :row-style="getRowStyle">
       <el-table-column prop="productName" label="商品名称" />
       <el-table-column prop="sku" label="SKU" width="150" />
@@ -57,14 +127,13 @@ const getRowStyle = (row: any) => {
       <el-table-column prop="updatedAt" label="更新时间" width="180" />
     </el-table>
 
-    <!-- 分页 — 候选人实现 -->
     <div style="margin-top: 16px; text-align: right">
       <el-pagination
         v-model:current-page="page"
         :page-size="pageSize"
         :total="total"
         layout="total, prev, pager, next"
-        @current-change="loadInventory"
+        @current-change="handlePageChange"
       />
     </div>
 

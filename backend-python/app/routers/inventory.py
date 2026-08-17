@@ -16,11 +16,12 @@ GET  /api/inventory         — 库存查询（任务2）
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 from datetime import date
 
 from app.database import get_db
-from app.models import Product, Location, Inventory, InboundOrder, InboundOrderItem
+from app.models import Product, Location, Inventory, Warehouse, InboundOrder, InboundOrderItem
 from app.schemas import InboundOrderCreate
 
 router = APIRouter(tags=["库存 & 入库"])
@@ -128,19 +129,70 @@ def create_inbound_order(req: InboundOrderCreate, db: Session = Depends(get_db))
 @router.get("/api/inventory")
 def query_inventory(
     keyword: str | None = Query(default=None, description="商品名称/SKU 模糊搜索"),
-    warehouse_id: int | None = Query(default=None, description="仓库ID"),
+    warehouse_id: int | None = Query(default=None, alias="warehouseId", description="仓库ID"),
     page: int = Query(default=1, ge=1),
-    page_size: int = Query(default=20, ge=1, le=100),
+    page_size: int = Query(default=20, ge=1, le=100, alias="pageSize"),
     db: Session = Depends(get_db),
 ):
     """
-    库存查询 — 候选人实现
+    库存查询
 
     要求：
     1. 支持按 keyword 模糊搜索（商品名称/SKU）
-    2. 支持按 warehouse_id 筛选
+    2. 支持按 warehouseId 筛选
     3. 支持分页
     4. 返回关联的商品名称、SKU、仓库名称
+
+    注意：前端 api/index.ts 使用 camelCase 参数（warehouseId / pageSize），
+    这里通过 Query(alias=...) 兼容，无需修改前端。
     """
-    # TODO: 候选人实现
-    raise HTTPException(status_code=501, detail="请实现库存查询功能（任务2）")
+    # 基础查询：inventory JOIN product / location / warehouse（均为 1:1）
+    base = (
+        db.query(Inventory, Product, Location, Warehouse)
+        .join(Product, Inventory.product_id == Product.id)
+        .join(Location, Inventory.location_code == Location.code)
+        .join(Warehouse, Location.warehouse_id == Warehouse.id)
+    )
+
+    # 关键字过滤（商品名称 / SKU 模糊匹配，参数化防止注入）
+    if keyword:
+        kw = f"%{keyword}%"
+        base = base.filter(or_(Product.name.like(kw), Product.sku.like(kw)))
+
+    # 仓库过滤
+    if warehouse_id is not None:
+        base = base.filter(Location.warehouse_id == warehouse_id)
+
+    # 总数（1:1 JOIN，行数即库存记录数）
+    total = base.count()
+
+    # 分页
+    offset = (page - 1) * page_size
+    rows = (
+        base.order_by(Inventory.id)
+        .offset(offset)
+        .limit(page_size)
+        .all()
+    )
+
+    items = []
+    for inv, prod, loc, wh in rows:
+        items.append({
+            "productId": prod.id,
+            "productName": prod.name,
+            "sku": prod.sku,
+            "locationCode": loc.code,
+            "warehouseName": wh.name,
+            "quantity": inv.quantity,
+            "updatedAt": inv.updated_at.isoformat() if inv.updated_at else None,
+        })
+
+    return {
+        "code": 200,
+        "data": {
+            "list": items,
+            "total": total,
+            "page": page,
+            "pageSize": page_size,
+        },
+    }
