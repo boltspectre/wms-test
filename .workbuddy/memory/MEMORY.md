@@ -31,5 +31,5 @@
 - 必做1：入库单（后端 inventory.py ✅已做①；前端 InboundView.vue ✅已做②）
 - 必做2：库存查询（后端 inventory.py ✅已做③；前端 InventoryView.vue ✅已做④）
 - 必做3：Bug 修复（后端 products.py 删除校验 ✅已做⑤；前端 ProductsView.vue 跳页 ✅已做⑥）
-- 选做 A 出库单+并发；B 单元测试；C 前端性能
-- 提交前需写根目录 NOTES.md（AI 使用说明 + Bug 记录）
+- 选做 A 出库单+并发 ✅；B 单元测试 ✅（test_wms.py 13 用例）；C 前端性能 ✅（App.vue keep-alive）
+- 提交前需写根目录 NOTES.md（AI 使用说明 + Bug 记录）✅ 已完成；测试.md 已追加功能四/选做B/C

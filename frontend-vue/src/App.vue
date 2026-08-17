@@ -17,11 +17,17 @@
         <el-menu-item index="/products">商品管理</el-menu-item>
         <el-menu-item index="/inventory">库存查询</el-menu-item>
         <el-menu-item index="/inbound">入库管理</el-menu-item>
+        <el-menu-item index="/outbound">出库管理</el-menu-item>
       </el-menu>
     </el-header>
 
     <el-main style="padding: 20px">
-      <router-view />
+      <!-- 选做 C 前端性能：keep-alive 缓存视图实例，切换菜单时不重复请求/重建组件 -->
+      <router-view v-slot="{ Component }">
+        <keep-alive>
+          <component :is="Component" />
+        </keep-alive>
+      </router-view>
     </el-main>
   </el-container>
 </template>

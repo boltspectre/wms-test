@@ -1,19 +1,20 @@
 <script setup lang="ts">
 /**
  * ============================================
- *  入库管理页 — 已实现（任务1）
+ *  出库管理页 — 已实现（选做 A：出库单 + 并发安全）
  * ============================================
  *
  * 需求：
- * 1. 表单：供应商名称 + 入库明细列表
+ * 1. 表单：客户名称 + 出库明细列表
  * 2. 每行明细：选择商品（下拉远程搜索）→ 选择仓库 → 选择库位（级联）→ 输入数量
  * 3. 支持添加/删除明细行
- * 4. 提交按钮（调用 createInboundOrder API）
+ * 4. 提交按钮（调用 createOutboundOrder API，后端原子扣减库存 + 并发安全）
+ * 5. 下方展示最近出库单列表
  *
  * 说明：
- * - 商品下拉支持远程搜索（调 getProducts），并累积缓存避免已选项 label 丢失
- * - 仓库选择后级联加载该仓库的库位列表（调 getLocations）
- * - 提交前做必填校验，成功后提示并重置表单
+ * - 商品/仓库/库位的级联与入库页一致
+ * - 接口报错统一由 src/api/client.ts 拦截器以**右上角弹窗（ElNotification）**提示，本页不再重复弹错
+ * - 提交成功用 ElMessage 提示单号并重置表单
  */
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
@@ -21,13 +22,14 @@ import {
   getProducts,
   getWarehouses,
   getLocations,
-  createInboundOrder,
+  createOutboundOrder,
+  getOutboundOrders,
   type Product,
   type Warehouse,
   type Location,
 } from '@/api'
 
-const supplierName = ref('')
+const customerName = ref('')
 const items = ref<any[]>([])
 const submitting = ref(false)
 
@@ -39,24 +41,20 @@ const productLoading = ref(false)
 // 仓库下拉：全量加载（数量少）
 const warehouseOptions = ref<Warehouse[]>([])
 
+// 最近出库单
+const orders = ref<any[]>([])
+const loadingOrders = ref(false)
+
 const loadWarehouses = async () => {
-  try {
-    const res = await getWarehouses()
-    warehouseOptions.value = res.data
-  } catch {
-    // 错误提示由全局拦截器以右上角弹窗展示
-  }
+  const res = await getWarehouses()
+  warehouseOptions.value = res.data
 }
 
 // 初始加载全量商品
 const loadAllProducts = async () => {
-  try {
-    const res = await getProducts()
-    res.data.forEach((p) => productMap.value.set(p.id, p))
-    productOptions.value = Array.from(productMap.value.values())
-  } catch {
-    // 错误提示由全局拦截器以右上角弹窗展示
-  }
+  const res = await getProducts()
+  res.data.forEach((p) => productMap.value.set(p.id, p))
+  productOptions.value = Array.from(productMap.value.values())
 }
 
 // 商品下拉远程搜索（累积进缓存）
@@ -66,8 +64,6 @@ const remoteProductMethod = async (query: string) => {
     const res = await getProducts(query || undefined)
     res.data.forEach((p) => productMap.value.set(p.id, p))
     productOptions.value = Array.from(productMap.value.values())
-  } catch {
-    // 错误提示由全局拦截器以右上角弹窗展示
   } finally {
     productLoading.value = false
   }
@@ -92,22 +88,18 @@ const onWarehouseChange = async (item: any) => {
   item.locationCode = ''
   item.locations = []
   if (!item.warehouseId) return
-  try {
-    const res = await getLocations(item.warehouseId)
-    item.locations = res.data
-  } catch {
-    // 错误提示由全局拦截器以右上角弹窗展示
-  }
+  const res = await getLocations(item.warehouseId)
+  item.locations = res.data
 }
 
 const handleSubmit = async () => {
   // 前端校验
-  if (!supplierName.value.trim()) {
-    ElMessage.warning('请填写供应商名称')
+  if (!customerName.value.trim()) {
+    ElMessage.warning('请填写客户名称')
     return
   }
   if (items.value.length === 0) {
-    ElMessage.warning('请至少添加一条入库明细')
+    ElMessage.warning('请至少添加一条出库明细')
     return
   }
   for (let i = 0; i < items.value.length; i++) {
@@ -133,43 +125,54 @@ const handleSubmit = async () => {
   submitting.value = true
   try {
     const payload = {
-      supplierName: supplierName.value.trim(),
+      customerName: customerName.value.trim(),
       items: items.value.map((it) => ({
         productId: it.productId,
         quantity: it.quantity,
         locationCode: it.locationCode,
       })),
     }
-    const res = await createInboundOrder(payload)
-    ElMessage.success(`入库单创建成功，单号：${res?.data?.orderNo || ''}`)
+    const res = await createOutboundOrder(payload)
+    ElMessage.success(`出库单创建成功，单号：${res?.data?.orderNo || ''}`)
     // 重置表单
-    supplierName.value = ''
+    customerName.value = ''
     items.value = []
     addItem()
-  } catch {
-    // 错误提示由全局拦截器以右上角弹窗展示
+    // 刷新下方列表
+    await loadOutboundOrders()
   } finally {
     submitting.value = false
   }
 }
 
-onMounted(() => {
+const loadOutboundOrders = async () => {
+  loadingOrders.value = true
+  try {
+    const res = await getOutboundOrders({ page: 1, pageSize: 20 })
+    orders.value = res.data.list
+  } finally {
+    loadingOrders.value = false
+  }
+}
+
+onMounted(async () => {
   loadWarehouses()
   loadAllProducts()
   addItem() // 默认给一行空明细
+  await loadOutboundOrders()
 })
 </script>
 
 <template>
   <div>
-    <h3>入库管理</h3>
+    <h3>出库管理</h3>
 
     <el-form label-width="100px" style="max-width: 960px">
-      <el-form-item label="供应商名称" required>
-        <el-input v-model="supplierName" placeholder="请输入供应商名称" style="max-width: 400px" />
+      <el-form-item label="客户名称" required>
+        <el-input v-model="customerName" placeholder="请输入客户名称" style="max-width: 400px" />
       </el-form-item>
 
-      <el-form-item label="入库明细">
+      <el-form-item label="出库明细">
         <el-button type="primary" @click="addItem">+ 添加明细</el-button>
       </el-form-item>
     </el-form>
@@ -247,9 +250,18 @@ onMounted(() => {
       @click="handleSubmit"
       :disabled="items.length === 0"
     >
-      提交入库单
+      提交出库单
     </el-button>
 
-    <el-empty v-if="items.length === 0" description="请点击“添加明细”按钮添加入库商品" />
+    <el-empty v-if="items.length === 0" description="请点击“添加明细”按钮添加出库商品" />
+
+    <!-- 最近出库单 -->
+    <h3 style="margin-top: 32px">最近出库单</h3>
+    <el-table :data="orders" v-loading="loadingOrders" border stripe>
+      <el-table-column prop="orderNo" label="单号" width="180" />
+      <el-table-column prop="customerName" label="客户名称" />
+      <el-table-column prop="status" label="状态" width="120" />
+      <el-table-column prop="createdAt" label="创建时间" width="200" />
+    </el-table>
   </div>
 </template>

@@ -69,6 +69,7 @@ class InboundOrderCreate(BaseModel):
 
 # ============ 库存查询（候选人实现） ============
 
+
 class InventoryResponse(BaseModel):
     """库存查询响应"""
     product_id: int
@@ -81,3 +82,23 @@ class InventoryResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# ============ 出库单（选做 A 实现） ============
+
+
+class OutboundItemRequest(BaseModel):
+    """出库明细请求（兼容前端 camelCase 传参）"""
+    model_config = ConfigDict(populate_by_name=True)
+
+    product_id: int = Field(..., gt=0, alias="productId", description="商品ID")
+    quantity: int = Field(..., gt=0, description="出库数量")
+    location_code: str = Field(..., min_length=1, max_length=50, alias="locationCode", description="出库库位编码")
+
+
+class OutboundOrderCreate(BaseModel):
+    """创建出库单请求（兼容前端 camelCase 传参）"""
+    model_config = ConfigDict(populate_by_name=True)
+
+    customer_name: str = Field(..., min_length=1, max_length=200, alias="customerName", description="客户名称")
+    items: list[OutboundItemRequest] = Field(..., min_length=1, description="出库明细")

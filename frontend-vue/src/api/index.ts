@@ -86,3 +86,24 @@ export const createInboundOrder = (data: {
   items: InboundItemRequest[]
 }) =>
   api.post('/inbound-orders', data)
+
+
+// ============ 出库单（选做 A） ============
+
+export interface OutboundItemRequest {
+  productId: number
+  quantity: number
+  locationCode: string
+}
+
+export const createOutboundOrder = (data: {
+  customerName: string
+  items: OutboundItemRequest[]
+}) =>
+  api.post('/outbound-orders', data)
+
+export const getOutboundOrders = (params: { page?: number; pageSize?: number }) =>
+  api.get<any, { code: number; data: { list: any[]; total: number; page: number; pageSize: number } }>(
+    '/outbound-orders',
+    { params }
+  )

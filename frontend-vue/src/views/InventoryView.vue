@@ -8,7 +8,6 @@
  * 4. 支持分页（后端分页）
  */
 import { ref, onMounted, watch } from 'vue'
-import { ElMessage } from 'element-plus'
 import {
   getInventory,
   getWarehouses,
@@ -37,8 +36,8 @@ const loadInventory = async () => {
     })
     inventoryList.value = res.data.list
     total.value = res.data.total
-  } catch (e: any) {
-    ElMessage.error('加载失败: ' + (e.response?.data?.message || e.message))
+  } catch {
+    // 错误提示由全局拦截器以右上角弹窗展示
   } finally {
     loading.value = false
   }
@@ -83,8 +82,8 @@ onMounted(async () => {
   try {
     const res = await getWarehouses()
     warehouses.value = res.data
-  } catch (e: any) {
-    ElMessage.error('加载仓库失败: ' + (e.response?.data?.message || e.message))
+  } catch {
+    // 错误提示由全局拦截器以右上角弹窗展示
   }
   await loadInventory()
 })

@@ -30,8 +30,8 @@ const loadProducts = async () => {
   try {
     const res = await getProducts(keyword.value || undefined)
     products.value = res.data
-  } catch (e: any) {
-    ElMessage.error('加载失败: ' + (e.response?.data?.message || e.message))
+  } catch {
+    // 错误提示由全局拦截器以右上角弹窗展示
   } finally {
     loading.value = false
   }
@@ -77,8 +77,8 @@ const handleSubmit = async () => {
       currentPage.value = 1
     }
     await loadProducts()
-  } catch (e: any) {
-    ElMessage.error(e.response?.data?.message || '操作失败')
+  } catch {
+    // 错误提示由全局拦截器以右上角弹窗展示
   }
 }
 
