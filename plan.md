@@ -23,10 +23,10 @@
 - 后端：`GET /api/inventory`（keyword/warehouseId 过滤、JOIN 四表、分页、camelCase 兼容）。见 `inventory.py` 的 `query_inventory`。
 - 前端：`InventoryView.vue`（搜索栏+仓库下拉、低库存<10 红色高亮、后端分页、输入防抖 300ms）。见 `frontend-vue/src/views/InventoryView.vue`。
 
-### 功能三 Bug 修复（后端⑤ + 前端⑥）— 待做
-- 后端：`products.py` 删除商品前校验关联库存，有则 400 拒绝（避免孤立库存）。
-- 前端：`ProductsView.vue` 编辑后页码跳回第 1 页 → 把 `currentPage=1` 移入「新增」分支，编辑时保留当前页。
-- 前端本身有无问题先核对；若编辑跳页是唯一问题则仅改这一处。
+### 功能三 Bug 修复（后端⑤ + 前端⑥）— 已完成 ✅
+- 后端：`products.py` `delete_product` 删除前查 `Inventory`，有则 `400` 拒绝（detail 含库位与数量），无库存才允许删除。见 `backend-python/app/routers/products.py`。验证：有库存商品→400、无库存临时商品→200、不存在→404；数据库保持 6 个商品。
+- 前端：`ProductsView.vue` `handleSubmit` 把 `currentPage=1` 移入「新增」分支，编辑时保留当前页码；其余逻辑不动。见 `frontend-vue/src/views/ProductsView.vue`。编译通过。
+- 说明：当前种子仅 6 个商品（pageSize=10，全在第 1 页），编辑跳页 Bug 在页面上不可见；需 >10 个商品（出现第 2 页）才能直观复现差异。
 
 ### 功能四 选做 A 出库单 + 并发安全（后端 + 前端）— 待做
 - 模型：`OutboundOrder`/`OutboundOrderItem`（API_SPEC 已有表）。
@@ -46,4 +46,4 @@
 ---
 
 ## 执行顺序
-功能一（✅）→ 功能二（✅）→ 功能三 →（功能四 / 选做 B / 选做 C）→ 收尾
+功能一（✅）→ 功能二（✅）→ 功能三（✅）→（功能四 / 选做 B / 选做 C）→ 收尾

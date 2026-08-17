@@ -25,10 +25,11 @@
 - 推进单位 = **完整功能**：同一功能的前后端一起改（除非该功能纯后端、无前端）；前端若本来无问题则不改动。改完按功能汇报，并**必须附带【网页操作步骤 + 正确预期结果】**（不仅是 curl/API 测试），等用户确认「继续」再做下一个功能。
 - 关键发现：后端 schemas/router 用 snake_case，但前端 api/index.ts 与 API_SPEC.md 用 camelCase；新接口一律用 Pydantic alias 让后端兼容 camelCase，不改前端。
 - AI分析文档.md 称 inventory.py 入库/库存接口「已实现」不实，实际是 stub（raise 501）；必做1/2 后端都需自己实现。
+- 集中测试文档：根目录 `测试.md` 记录每个 plan 功能的【修改内容 + 测试校验方法】。**约定：每完成一个功能，既在 `测试.md` 追加对应章节，也在对话中直接返回同样内容**。已完成项：功能一二三（入库单/库存查询/Bug修复）。
 
 ## 项目任务（TASKS.md / plan.md，逐项推进）
 - 必做1：入库单（后端 inventory.py ✅已做①；前端 InboundView.vue ✅已做②）
 - 必做2：库存查询（后端 inventory.py ✅已做③；前端 InventoryView.vue ✅已做④）
-- 必做3：Bug 修复（后端 products.py 删除校验 待⑤；前端 ProductsView.vue 跳页 待⑥）
+- 必做3：Bug 修复（后端 products.py 删除校验 ✅已做⑤；前端 ProductsView.vue 跳页 ✅已做⑥）
 - 选做 A 出库单+并发；B 单元测试；C 前端性能
 - 提交前需写根目录 NOTES.md（AI 使用说明 + Bug 记录）
