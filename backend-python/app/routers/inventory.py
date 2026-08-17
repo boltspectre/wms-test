@@ -20,7 +20,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, text
 from sqlalchemy.exc import IntegrityError, OperationalError
-from datetime import date
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+from datetime import date, datetime
 
 from app.database import get_db
 from app.models import (
@@ -85,20 +86,23 @@ def create_inbound_order(req: InboundOrderCreate, db: Session = Depends(get_db))
                     location_code=item.location_code,
                 ))
 
-                # 累加库存：同一 (product_id, location_code) 已存在则更新，否则新建
-                inv = db.query(Inventory).filter(
-                    Inventory.product_id == item.product_id,
-                    Inventory.location_code == item.location_code,
-                ).first()
-                if inv:
-                    inv.quantity += item.quantity
-                else:
-                    inv = Inventory(
-                        product_id=item.product_id,
-                        location_code=item.location_code,
-                        quantity=item.quantity,
-                    )
-                    db.add(inv)
+                # 原子累加库存（UPSERT）：单条 SQL 完成「存在则累加 / 不存在则新建」，
+                # 由 SQLite 写锁保证读-改-写不被并发事务穿插，从根本上避免「丢失更新」。
+                # 依赖 inventory 表 (product_id, location_code) 唯一约束 uk_product_location。
+                upsert = sqlite_insert(Inventory).values(
+                    product_id=item.product_id,
+                    location_code=item.location_code,
+                    quantity=item.quantity,
+                    updated_at=datetime.now(),
+                )
+                upsert = upsert.on_conflict_do_update(
+                    index_elements=[Inventory.product_id, Inventory.location_code],
+                    set_={
+                        Inventory.quantity: Inventory.quantity + upsert.excluded.quantity,
+                        Inventory.updated_at: datetime.now(),
+                    },
+                )
+                db.execute(upsert)
 
                 item_responses.append({
                     "productId": item.product_id,
@@ -129,6 +133,77 @@ def create_inbound_order(req: InboundOrderCreate, db: Session = Depends(get_db))
             raise HTTPException(status_code=400, detail="数据冲突，请重试")
 
     raise HTTPException(status_code=500, detail="生成入库单号失败，请重试")
+
+
+@router.get("/api/inbound-orders")
+def list_inbound_orders(
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100, alias="pageSize"),
+    db: Session = Depends(get_db),
+):
+    """入库单列表（按创建时间倒序，简单分页）— API_SPEC §3.2"""
+    total = db.query(InboundOrder).count()
+    offset = (page - 1) * page_size
+    orders = (
+        db.query(InboundOrder)
+        .order_by(InboundOrder.id.desc())
+        .offset(offset)
+        .limit(page_size)
+        .all()
+    )
+    items = []
+    for o in orders:
+        items.append({
+            "id": o.id,
+            "orderNo": o.order_no,
+            "supplierName": o.supplier_name,
+            "status": o.status,
+            "createdAt": o.created_at.isoformat() if o.created_at else None,
+        })
+    return {
+        "code": 200,
+        "data": {
+            "list": items,
+            "total": total,
+            "page": page,
+            "pageSize": page_size,
+        },
+    }
+
+
+@router.get("/api/inbound-orders/{order_id}")
+def get_inbound_order(order_id: int, db: Session = Depends(get_db)):
+    """入库单详情（含明细与商品名）— API_SPEC §3.3"""
+    order = db.query(InboundOrder).filter(InboundOrder.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail=f"入库单不存在: id={order_id}")
+
+    rows = (
+        db.query(InboundOrderItem, Product)
+        .join(Product, InboundOrderItem.product_id == Product.id)
+        .filter(InboundOrderItem.order_id == order_id)
+        .all()
+    )
+    item_list = []
+    for it, prod in rows:
+        item_list.append({
+            "productId": it.product_id,
+            "productName": prod.name,
+            "quantity": it.quantity,
+            "locationCode": it.location_code,
+        })
+
+    return {
+        "code": 200,
+        "data": {
+            "id": order.id,
+            "orderNo": order.order_no,
+            "supplierName": order.supplier_name,
+            "status": order.status,
+            "createdAt": order.created_at.isoformat() if order.created_at else None,
+            "items": item_list,
+        },
+    }
 
 
 @router.get("/api/inventory")

@@ -157,3 +157,30 @@ SQLite 不支持行级锁，出库扣减采用：
 - **git log** —— 落地视角：每个功能对应一次（或一组）提交，三者可互相印证"为什么这么改"。
 
 > 一句话总结我们的配合：**你定方向、按功能下指令、逐步验收；我读代码、写实现、带测试、写文档——每一步都等你「继续」。**
+
+---
+
+## 八、规范符合性审计（考核点自查）
+
+针对考核点（RESTful / 事务 / 异常 / 前端交互）与 `API_SPEC.md` 做了一次代码自查，并修复了三处客观不达标项：
+
+### 自查结论
+
+| 考核点 | 结论 | 说明 |
+|--------|------|------|
+| RESTful 设计 | ⚠️ 有缺口 → 已修 | 资源名词/动词正确；原缺 `GET /api/inbound-orders`（列表）与 `GET /api/inbound-orders/{id}`（详情，规范 §3.2/§3.3），**已补齐** |
+| 事务处理 | ⚠️ 入库有隐患 → 已修 | 出库原子 UPDATE 正确；原入库库存累加是「先查后改」**非原子，并发会丢失更新**，**已改为原子 UPSERT** |
+| 异常处理 | ⚠️ 格式不符 → 已修 | 库位不存在/数量 `gt=0`/空明细/删除守卫均覆盖；原错误体是 FastAPI 默认 `{"detail":...}`，**不符合规范 `{code,message,data:null}`**，已加全局异常处理器统一包络 |
+| 前端交互 | ✅ 流畅 | 远程搜索 / 仓库→库位级联 / 防抖 / 分页 / 低库存红标 / 右上角弹窗均到位（小瑕疵：`v-for :key="index"`） |
+
+### 修复清单
+1. `app/main.py`：新增**全局异常处理器**（`StarletteHTTPException` + `RequestValidationError`），所有错误统一返回 `{code, message, data:null}`，符合 `API_SPEC.md` 错误约定。
+2. `app/routers/inventory.py`：新增**入库单列表**（`GET /api/inbound-orders` 分页）与**详情**（`GET /api/inbound-orders/{id}`，含明细与商品名），补全规范 §3.2/§3.3。
+3. `app/routers/inventory.py`：入库库存累加由 `query`+`+=` 改为**原子 `INSERT ... ON CONFLICT DO UPDATE`**（依赖 `uk_product_location` 唯一约束），消除并发入库的丢失更新；出库仍是原子 UPDATE。
+
+### 验证（全部通过）
+- 单元回归 `pytest test_wms.py`：**13/13 通过**。
+- 接口实测（临时测试商品，测后已清理复位）：
+  - 入库创建 201；列表 200（total 含新单）；详情 200（items 带 `productName`）。
+  - 错误包络：`quantity=0` → 422 `{"code":422,"message":"请求参数校验失败","data":null}`；不存在商品 → 400 `{"code":400,"message":"商品不存在: id=99999","data":null}`。
+  - 并发原子性：20 个并发入库各 qty=5 + 前置 1 次 qty=50 → 最终库存 **150（=50+20×5）**，**无丢失更新**（PASS）。
