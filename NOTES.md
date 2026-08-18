@@ -60,25 +60,33 @@ cd backend-python
 | 库存查询（必做2） | `GET /api/inventory`（四表JOIN/过滤/分页） | `InventoryView.vue` | ✅ |
 | Bug 修复（必做3） | `delete_product` 库存校验 | `ProductsView.vue` 编辑跳页 | ✅ |
 | 出库单 + 并发（选做A） | `POST/GET /api/outbound-orders`（原子扣减） | `OutboundView.vue` | ✅ |
-| 单元测试（选做B） | `test_wms.py`（13 用例） | — | ✅ |
-| 前端性能（选做C） | — | `App.vue` keep-alive | ✅ |
+| 单元测试（选做B） | `test_wms.py`（13 用例，API/HTTP 层） | — | ⚠️ 部分（见下） |
+| 前端性能（选做C） | `InventoryView` 搜索防抖 300ms | `App.vue` keep-alive | ✅ |
+
+> **选做 B（单元测试）说明**：题目要求（TASKS.md L92-96）为「后端：入库单创建的 Service 层」+「前端：库存列表的筛选逻辑」两类测试（各至少 2 例）。实际：`test_wms.py` 用 FastAPI `TestClient` 对**后端 API 层**覆盖入库/库存/出库/删除共 13 用例（含并发与异常路径），满足"后端 + 至少 2 例"；但**前端筛选逻辑未单独写单测**（无 vitest/jest 用例），此项为缺口，如实标注。
+>
+> **选做 C（前端性能）说明**：题目（TASKS.md L100-106）候选方案为「虚拟滚动 / 防抖搜索 / 后端分页」。真正命中题目候选的是**功能二已实现的搜索防抖 300ms**（`InventoryView.vue`），直接缓解大列表频繁请求；`App.vue` 的 `keep-alive` 是额外补充优化（切菜单缓存视图、避免重复发请求），但它**不解决 500+ 行渲染卡顿**。两项叠加，选做 C 视为达标，但 keep-alive 非题目候选方案，特此说明归因。
 
 全局：接口错误统一以**右上角 ElNotification 弹窗**提示（`frontend-vue/src/api/client.ts`）。
 
 ---
 
-## 四、预埋 Bug 与修复记录（Bug Records）
+## 四、Bug 与修复记录（Bug Records）
 
-### Bug 1 — 删除商品产生孤立库存（后端）
+> 任务 3（TASKS.md L66）明确：模板代码**预埋了 2 个 Bug**。下方 **Bug 1、Bug 2** 即为这两个预埋 Bug；**Bug 3、Bug 4** 是开发过程中额外发现并修复的问题（**非模板预埋**），单独归在「其他修复与改进」下，以免与"预埋"混淆。
+
+### Bug 1 — 删除商品产生孤立库存（后端 · 任务3 预埋 Bug①）
 - **位置**：`backend-python/app/routers/products.py` 原 `delete_product`
 - **现象**：直接 `db.delete(product)`，但 `Inventory.product_id` 是 FK，而 SQLite 默认**不开启 `PRAGMA foreign_keys`**，删除会"成功"却留下指向已删商品的孤立库存记录。
 - **修复**：删除前先查 `Inventory`，存在关联库存则返回 `400`（含库位与数量提示），无库存才删除。前端 `ProductsView.vue` 在删除失败时由拦截器弹窗提示。
 
-### Bug 2 — 编辑商品后列表跳回第 1 页（前端）
+### Bug 2 — 编辑商品后列表跳回第 1 页（前端 · 任务3 预埋 Bug②）
 - **位置**：`frontend-vue/src/views/ProductsView.vue` 原 `handleSubmit`
 - **现象**：提交后无条件 `currentPage.value = 1`，导致在第 2 页及以后编辑商品时列表跳回第 1 页（页码丢失）。
 - **修复**：把 `currentPage.value = 1` 移入「新增」分支（`if(!form.value.id) currentPage.value = 1`），编辑时保留当前页码。
 - 注：种子仅 6 个商品（pageSize=10，全在第 1 页），此 Bug 需 >10 商品（出现第 2 页）才直观复现。
+
+### 其他修复与改进（非模板预埋）
 
 ### Bug 3 — 入库/库存接口原是 stub（需求文档与实现不符）
 - **位置**：`backend-python/app/routers/inventory.py` 原 `create_inbound_order` / `query_inventory` 仅是 `raise 501`。

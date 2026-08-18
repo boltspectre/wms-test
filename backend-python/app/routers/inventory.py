@@ -162,6 +162,7 @@ def list_inbound_orders(
         })
     return {
         "code": 200,
+        "message": "success",
         "data": {
             "list": items,
             "total": total,
@@ -195,6 +196,7 @@ def get_inbound_order(order_id: int, db: Session = Depends(get_db)):
 
     return {
         "code": 200,
+        "message": "success",
         "data": {
             "id": order.id,
             "orderNo": order.order_no,
@@ -269,6 +271,7 @@ def query_inventory(
 
     return {
         "code": 200,
+        "message": "success",
         "data": {
             "list": items,
             "total": total,
@@ -416,6 +419,7 @@ def list_outbound_orders(
         })
     return {
         "code": 200,
+        "message": "success",
         "data": {
             "list": items,
             "total": total,
