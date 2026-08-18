@@ -107,3 +107,9 @@ export const getOutboundOrders = (params: { page?: number; pageSize?: number }) 
     '/outbound-orders',
     { params }
   )
+
+export const getInboundOrders = (params: { page?: number; pageSize?: number }) =>
+  api.get<any, { code: number; data: { list: any[]; total: number; page: number; pageSize: number } }>(
+    '/inbound-orders',
+    { params }
+  )

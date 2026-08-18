@@ -138,7 +138,7 @@ def create_inbound_order(req: InboundOrderCreate, db: Session = Depends(get_db))
 @router.get("/api/inbound-orders")
 def list_inbound_orders(
     page: int = Query(default=1, ge=1),
-    page_size: int = Query(default=20, ge=1, le=100, alias="pageSize"),
+    page_size: int = Query(default=20, ge=1, le=1000, alias="pageSize"),
     db: Session = Depends(get_db),
 ):
     """入库单列表（按创建时间倒序，简单分页）— API_SPEC §3.2"""
@@ -213,7 +213,7 @@ def query_inventory(
     keyword: str | None = Query(default=None, description="商品名称/SKU 模糊搜索"),
     warehouse_id: int | None = Query(default=None, alias="warehouseId", description="仓库ID"),
     page: int = Query(default=1, ge=1),
-    page_size: int = Query(default=20, ge=1, le=100, alias="pageSize"),
+    page_size: int = Query(default=20, ge=1, le=1000, alias="pageSize"),
     db: Session = Depends(get_db),
 ):
     """
@@ -395,7 +395,7 @@ def create_outbound_order(req: OutboundOrderCreate, db: Session = Depends(get_db
 @router.get("/api/outbound-orders")
 def list_outbound_orders(
     page: int = Query(default=1, ge=1),
-    page_size: int = Query(default=20, ge=1, le=100, alias="pageSize"),
+    page_size: int = Query(default=20, ge=1, le=1000, alias="pageSize"),
     db: Session = Depends(get_db),
 ):
     """出库单列表（按创建时间倒序，简单分页）"""

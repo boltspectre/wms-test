@@ -8,6 +8,11 @@ const router = createRouter({
       redirect: '/products',
     },
     {
+      path: '/dashboard',
+      name: 'Dashboard',
+      component: () => import('@/views/DashboardView.vue'),
+    },
+    {
       path: '/products',
       name: 'Products',
       component: () => import('@/views/ProductsView.vue'),

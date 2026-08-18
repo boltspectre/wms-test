@@ -1,0 +1,282 @@
+/* =========================================================
+ * 全局基础样式 + 工具类 + 主题样式
+ * - 基础/滚动条：两种主题通用
+ * - [data-theme='beautified']：美化主题视觉
+ * - 原版主题（无 data-theme 或 data-theme='original'）：保持
+ *   Element Plus 默认外观，不做任何视觉侵入
+ * ========================================================= */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  font-size: 14px;
+}
+
+/* —— 滚动条美化（通用，低侵入）—— */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.35);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.55);
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* =========================================================
+ * 原版主题：中立容器（不清空默认，仅提供最小布局）
+ * ========================================================= */
+.wb-root {
+  min-height: 100vh;
+}
+.wb-main {
+  padding: 20px;
+  background: #ffffff;
+}
+.wb-view-wrap {
+  background: transparent;
+}
+
+/* =========================================================
+ * 美化主题
+ * ========================================================= */
+[data-theme='beautified'] body {
+  background: var(--app-bg);
+  color: var(--app-text);
+}
+
+/* —— 顶栏 —— */
+[data-theme='beautified'] .wb-topbar {
+  background: var(--app-topbar-bg);
+  color: var(--app-topbar-text);
+  border-bottom: 1px solid var(--app-border);
+  box-shadow: var(--app-shadow);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  height: 60px;
+}
+[data-theme='beautified'] .wb-brand-text {
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: 0.5px;
+  background: linear-gradient(90deg, #2563eb, #0ea5e9);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+[data-theme='beautified'] .wb-brand-logo {
+  font-size: 24px;
+  color: var(--app-primary);
+  margin-right: 8px;
+}
+[data-theme='beautified'] .wb-topbar-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* —— 侧边栏 —— */
+[data-theme='beautified'] .wb-sidebar {
+  background: var(--app-sidebar-bg);
+  border-right: none;
+  transition: width 0.25s ease;
+  overflow: hidden;
+  position: relative;
+}
+[data-theme='beautified'] .wb-sidebar-logo {
+  height: 60px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 18px;
+  color: #fff;
+  font-weight: 700;
+  font-size: 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+[data-theme='beautified'] .wb-sidebar-logo .el-icon {
+  font-size: 22px;
+  color: var(--app-sidebar-logo);
+}
+[data-theme='beautified'] .wb-smenu {
+  background: transparent;
+  border-right: none;
+}
+[data-theme='beautified'] .wb-smenu .el-menu-item {
+  color: var(--app-sidebar-text);
+  height: 48px;
+  line-height: 48px;
+  margin: 4px 10px;
+  border-radius: var(--app-radius-sm);
+}
+[data-theme='beautified'] .wb-smenu .el-menu-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+}
+[data-theme='beautified'] .wb-smenu .el-menu-item.is-active {
+  background: var(--app-sidebar-active-bg);
+  color: var(--app-sidebar-text-active);
+  position: relative;
+}
+[data-theme='beautified'] .wb-smenu .el-menu-item.is-active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--app-sidebar-active-bar);
+}
+
+/* —— 内容区 + 卡片化视图容器 —— */
+[data-theme='beautified'] .wb-main {
+  background: var(--app-bg);
+  padding: 0;
+}
+[data-theme='beautified'] .wb-view-wrap {
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  box-shadow: var(--app-shadow);
+  padding: 22px 24px;
+  margin: 18px;
+  transition: box-shadow 0.25s ease;
+}
+[data-theme='beautified'] .wb-view-wrap:hover {
+  box-shadow: var(--app-shadow-md);
+}
+
+/* —— 表格润色 —— */
+[data-theme='beautified'] .el-table th.el-table__cell {
+  background: var(--app-surface-2);
+  color: var(--app-text-secondary);
+  font-weight: 600;
+}
+[data-theme='beautified'] .el-table {
+  border-radius: var(--app-radius-sm);
+  overflow: hidden;
+}
+
+/* —— 路由切换淡入（仅美化主题）—— */
+[data-theme='beautified'] .wb-fade-enter-active,
+[data-theme='beautified'] .wb-fade-leave-active {
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+[data-theme='beautified'] .wb-fade-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
+}
+[data-theme='beautified'] .wb-fade-leave-to {
+  opacity: 0;
+}
+
+/* —— 通用卡片标题（美化主题下使用）—— */
+[data-theme='beautified'] .wb-section-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--app-text);
+  margin: 0 0 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+[data-theme='beautified'] .wb-section-title::before {
+  content: '';
+  width: 4px;
+  height: 16px;
+  border-radius: 2px;
+  background: var(--app-primary);
+}
+
+/* —— 统计卡（Dashboard）—— */
+[data-theme='beautified'] .wb-stat-card {
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  box-shadow: var(--app-shadow);
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+[data-theme='beautified'] .wb-stat-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--app-shadow-md);
+}
+[data-theme='beautified'] .wb-stat-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  color: #fff;
+}
+[data-theme='beautified'] .wb-stat-icon.blue { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+[data-theme='beautified'] .wb-stat-icon.green { background: linear-gradient(135deg, #22c55e, #16a34a); }
+[data-theme='beautified'] .wb-stat-icon.amber { background: linear-gradient(135deg, #f59e0b, #d97706); }
+[data-theme='beautified'] .wb-stat-icon.sky { background: linear-gradient(135deg, #38bdf8, #0ea5e9); }
+
+/* =========================================================
+ * 主题切换开关（醒目，两种主题下都清晰可读）
+ * 容器为白色药丸 + 边框；未选中文字为黑色；选中为实心蓝底白字。
+ * 不再使用「白字 + 白/半透底」，避免悬停或选中时白字看不清。
+ * ========================================================= */
+.wb-theme-switch {
+  display: inline-flex;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  padding: 3px;
+  gap: 2px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+.wb-ts-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: transparent;
+  color: #1e293b;                 /* 黑色文字，两种主题均清晰 */
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.wb-ts-btn .el-icon {
+  font-size: 15px;
+}
+.wb-ts-btn:hover {
+  background: #f1f5f9;            /* 悬停浅灰底，文字仍为黑色，不会出现白字白底 */
+}
+.wb-ts-btn.active {
+  background: #2563eb;            /* 选中：实心蓝底 + 白字，对比强烈不会看不清 */
+  color: #ffffff;
+  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.35);
+}
